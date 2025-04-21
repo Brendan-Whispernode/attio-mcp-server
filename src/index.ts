@@ -202,13 +202,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
         const response = await api.post(path, {
           filter: {
-            rules: [
-              {
-                field: "name",
-                condition: "contains",
-                value: query
-              }
-            ]
+            name: {
+              "$contains": query
+            }
           }
         });
         const results = response.data.data || [];
