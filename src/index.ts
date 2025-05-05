@@ -187,6 +187,42 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["companyId", "noteTitle", "noteText"],
         },
       },
+      {
+        name: "get-deal-details",
+        description: "Get details of a specific deal",
+        inputSchema: {
+          type: "object",
+          properties: {
+            dealId: {
+              type: "string",
+              description: "ID of the deal to fetch details for",
+            },
+          },
+          required: ["dealId"],
+        },
+      },
+      {
+        name: "create-deal-note",
+        description: "Add a new note to a deal",
+        inputSchema: {
+          type: "object",
+          properties: {
+            dealId: {
+              type: "string",
+              description: "ID of the deal to add the note to",
+            },
+            noteTitle: {
+              type: "string",
+              description: "Title of the note",
+            },
+            noteText: {
+              type: "string",
+              description: "Text content of the note",
+            },
+          },
+          required: ["dealId", "noteTitle", "noteText"],
+        },
+      },
     ],
   };
 });
@@ -293,24 +329,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const companyId = request.params.arguments?.companyId as string;
       const noteTitle = request.params.arguments?.noteTitle as string;
       const noteText = request.params.arguments?.noteText as string;
-      const url = `notes`;
-
+      const path = `/objects/companies/records/${companyId}/notes`;
       try {
-        const response = await api.post(url, {
-          data: {
-            format: "plaintext",
-            parent_object: "companies",
-            parent_record_id: companyId,
-            title: `[AI] ${noteTitle}`,
-            content: noteText
-          },
+        const response = await api.post(path, {
+          title: noteTitle,
+          text: noteText,
         });
-
         return {
           content: [
             {
               type: "text",
-              text: `Note added to company ${companyId}: attio://notes/${response.data?.id?.note_id}`,
+              text: `Note created successfully for company ${companyId}`,
             },
           ],
           isError: false,
@@ -318,14 +347,74 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       } catch (error) {
         return createErrorResult(
           error instanceof Error ? error : new Error("Unknown error"),
-          url,
+          path,
           "POST",
           (error as any).response?.data || {}
         );
       }
     }
 
-    throw new Error("Tool not found");
+    if (toolName === "get-deal-details") {
+      const dealId = request.params.arguments?.dealId as string;
+      const path = `/objects/deals/records/${dealId}`;
+      try {
+        const response = await api.get(path);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Deal details for ${dealId}:\n${JSON.stringify(response.data, null, 2)}`,
+            },
+          ],
+          isError: false,
+        };
+      } catch (error) {
+        return createErrorResult(
+          error instanceof Error ? error : new Error("Unknown error"),
+          path,
+          "GET",
+          (error as any).response?.data || {}
+        );
+      }
+    }
+
+    if (toolName === "create-deal-note") {
+      const dealId = request.params.arguments?.dealId as string;
+      const noteTitle = request.params.arguments?.noteTitle as string;
+      const noteText = request.params.arguments?.noteText as string;
+      const path = `/objects/deals/records/${dealId}/notes`;
+      try {
+        const response = await api.post(path, {
+          data: {
+            values: {
+              title: noteTitle,
+              text: noteText,
+              format: "plaintext",
+              parent_object: "deals",
+              parent_record_id: dealId
+            }
+          }
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Note created successfully for deal ${dealId}: attio://notes/${response.data?.id?.note_id}`,
+            },
+          ],
+          isError: false,
+        };
+      } catch (error) {
+        return createErrorResult(
+          error instanceof Error ? error : new Error("Unknown error"),
+          path,
+          "POST",
+          (error as any).response?.data || {}
+        );
+      }
+    }
+
+    throw new Error(`Unknown tool: ${toolName}`);
   } catch (error) {
     return {
       content: [
