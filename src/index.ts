@@ -223,6 +223,47 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["dealId", "noteTitle", "noteText"],
         },
       },
+      {
+        name: "list-workspace-members",
+        description: "Lists all members of the workspace in Attio",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "get-workspace-member",
+        description: "Gets details for a specific workspace member by ID in Attio",
+        inputSchema: {
+          type: "object",
+          properties: {
+            workspaceMemberId: {
+              type: "string",
+              description: "ID of the workspace member to fetch",
+            },
+          },
+          required: ["workspaceMemberId"],
+        },
+      },
+      {
+        name: "query-deals",
+        description: "Queries deals with filters in Attio",
+        inputSchema: {
+          type: "object",
+          properties: {
+            filter: {
+              type: "object",
+              description: "Filter object for the query",
+            },
+            limit: {
+              type: "number",
+              description: "Maximum number of results to return (optional, default 100)",
+            },
+          },
+          required: ["filter"],
+        },
+      },
     ],
   };
 });
@@ -400,6 +441,81 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: `Note created successfully for deal ${dealId}: attio://notes/${response.data?.id?.note_id}`,
+            },
+          ],
+          isError: false,
+        };
+      } catch (error) {
+        return createErrorResult(
+          error instanceof Error ? error : new Error("Unknown error"),
+          path,
+          "POST",
+          (error as any).response?.data || {}
+        );
+      }
+    }
+
+    if (toolName === "list-workspace-members") {
+      const path = "/workspace_members";
+      try {
+        const response = await api.get(path);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Workspace members:\n${JSON.stringify(response.data, null, 2)}`,
+            },
+          ],
+          isError: false,
+        };
+      } catch (error) {
+        return createErrorResult(
+          error instanceof Error ? error : new Error("Unknown error"),
+          path,
+          "GET",
+          (error as any).response?.data || {}
+        );
+      }
+    }
+
+    if (toolName === "get-workspace-member") {
+      const workspaceMemberId = request.params.arguments?.workspaceMemberId as string;
+      const path = `/workspace_members/${workspaceMemberId}`;
+      try {
+        const response = await api.get(path);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Workspace member details:\n${JSON.stringify(response.data, null, 2)}`,
+            },
+          ],
+          isError: false,
+        };
+      } catch (error) {
+        return createErrorResult(
+          error instanceof Error ? error : new Error("Unknown error"),
+          path,
+          "GET",
+          (error as any).response?.data || {}
+        );
+      }
+    }
+
+    if (toolName === "query-deals") {
+      const filter = request.params.arguments?.filter as object;
+      const limit = request.params.arguments?.limit as number || 100;
+      const path = "/objects/deals/records/query";
+      try {
+        const response = await api.post(path, {
+          filter,
+          limit,
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Deals found:\n${JSON.stringify(response.data, null, 2)}`,
             },
           ],
           isError: false,
