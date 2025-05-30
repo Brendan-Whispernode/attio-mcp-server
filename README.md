@@ -7,6 +7,8 @@ This is an MCP server for [Attio](https://attio.com/), the AI-native CRM. It all
 - [x] reading company records
 - [x] reading company notes
 - [x] writing company notes
+- [x] Reading Deals (added)
+- [x] Reading Deal notes (added)
 - [ ] other activities
 
 ## Usage
